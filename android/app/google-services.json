@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "172012131210",
+    "project_id": "doctor-point-3b87a",
+    "storage_bucket": "doctor-point-3b87a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172012131210:android:565e5b8b98a67ba338ae73",
+        "android_client_info": {
+          "package_name": "com.example.doctor_point"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDykFDEjSaYbp52i2nkP5JlkfH-B2fZsyY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
