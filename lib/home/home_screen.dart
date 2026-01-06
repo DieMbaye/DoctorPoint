@@ -11,33 +11,16 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Accueil')),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-
-          return Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Bienvenue, ${data['fullName']} 👋',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text('Accueil – Liste des médecins'),
-              ],
+      body: FutureBuilder(
+        future:
+            FirebaseFirestore.instance.collection('users').doc(uid).get(),
+        builder: (_, snapshot) {
+          if (!snapshot.hasData) return const CircularProgressIndicator();
+          final data = snapshot.data!.data()!;
+          return Center(
+            child: Text(
+              'Bienvenue ${data['fullName']} 👋',
+              style: const TextStyle(fontSize: 22),
             ),
           );
         },

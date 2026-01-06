@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../home/home_screen.dart';
 import '../core/constants/app_colors.dart';
@@ -12,51 +14,81 @@ class SetupProfileScreen extends StatefulWidget {
 }
 
 class _SetupProfileScreenState extends State<SetupProfileScreen> {
+  final AuthService auth = AuthService();
+
   String? gender;
   DateTime? birthDate;
   final addressCtrl = TextEditingController();
-  final AuthService auth = AuthService();
-  bool loading = false;
+  File? imageFile;
+
+  Future<void> pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+
+    if (picked != null) {
+      setState(() => imageFile = File(picked.path));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Configurer le profil')),
+      appBar: AppBar(
+        title: const Text('Configurer le profil'),
+        backgroundColor: AppColors.primary,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: pickImage,
+              child: CircleAvatar(
+                radius: 55,
+                backgroundColor: Colors.grey.shade300,
+                backgroundImage:
+                    imageFile != null ? FileImage(imageFile!) : null,
+                child: imageFile == null
+                    ? const Icon(Icons.camera_alt, size: 30)
+                    : null,
+              ),
+            ),
+
+            const SizedBox(height: 24),
 
             DropdownButtonFormField<String>(
-              value: gender,
-              hint: const Text('Genre'),
+              decoration: const InputDecoration(labelText: 'Genre'),
               items: const [
                 DropdownMenuItem(value: 'Homme', child: Text('Homme')),
                 DropdownMenuItem(value: 'Femme', child: Text('Femme')),
               ],
-              onChanged: (v) => setState(() => gender = v),
+              onChanged: (v) => gender = v,
             ),
 
             const SizedBox(height: 16),
 
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: Text(
-                birthDate == null
-                    ? 'Date de naissance'
-                    : birthDate!.toLocal().toString().split(' ')[0],
+            TextFormField(
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: 'Date de naissance',
+                prefixIcon: Icon(Icons.calendar_today),
               ),
               onTap: () async {
-                final d = await showDatePicker(
+                final date = await showDatePicker(
                   context: context,
-                  initialDate: DateTime(2000),
-                  firstDate: DateTime(1950),
+                  firstDate: DateTime(1900),
                   lastDate: DateTime.now(),
                 );
-                if (d != null) setState(() => birthDate = d);
+                if (date != null) setState(() => birthDate = date);
               },
+              controller: TextEditingController(
+                text: birthDate == null
+                    ? ''
+                    : '${birthDate!.day}/${birthDate!.month}/${birthDate!.year}',
+              ),
             ),
+
+            const SizedBox(height: 16),
 
             TextField(
               controller: addressCtrl,
@@ -66,7 +98,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
               ),
             ),
 
-            const SizedBox(height: 32),
+            const Spacer(),
 
             SizedBox(
               width: double.infinity,
@@ -75,39 +107,33 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                 ),
-                onPressed: loading
-                    ? null
-                    : () async {
-                        if (gender == null ||
-                            birthDate == null ||
-                            addressCtrl.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Tous les champs sont requis'),
-                            ),
-                          );
-                          return;
-                        }
+                onPressed: () async {
+                  if (gender == null ||
+                      birthDate == null ||
+                      addressCtrl.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Veuillez remplir tous les champs'),
+                      ),
+                    );
+                    return;
+                  }
 
-                        setState(() => loading = true);
-                        await auth.completeProfile(
-                          uid: widget.uid,
-                          gender: gender!,
-                          birthDate: birthDate!,
-                          address: addressCtrl.text.trim(),
-                        );
+                  await auth.completeProfile(
+                    uid: widget.uid,
+                    gender: gender!,
+                    birthDate: birthDate!,
+                    address: addressCtrl.text.trim(),
+                    photoUrl: '', // plus tard Firebase Storage
+                  );
 
-                        if (!mounted) return;
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const HomeScreen(),
-                          ),
-                        );
-                      },
-                child: loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Terminer'),
+                  if (!mounted) return;
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  );
+                },
+                child: const Text('Terminer'),
               ),
             ),
           ],

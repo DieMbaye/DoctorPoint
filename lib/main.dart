@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'auth/auth_choice_screen.dart';
+import 'splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'DoctorPoint',
-      home: const AuthChoiceScreen(),
+      theme: ThemeData(
+        primaryColor: const Color(0xFF16A085),
+        scaffoldBackgroundColor: Colors.white,
+      ),
+      home: const SplashScreen(),
     );
   }
 }

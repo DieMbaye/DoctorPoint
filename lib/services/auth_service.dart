@@ -5,52 +5,60 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // LOGIN
-  Future<User> login({
+  // ================= LOGIN =================
+  Future<User?> login({
     required String email,
     required String password,
   }) async {
-    final res = await _auth.signInWithEmailAndPassword(
+    final result = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
-    return res.user!;
+    return result.user;
   }
 
-  // REGISTER
-  Future<User> register({
+  // ================= REGISTER =================
+  Future<User?> register({
     required String email,
     required String password,
     required String fullName,
     required String phone,
   }) async {
-    final res = await _auth.createUserWithEmailAndPassword(
+    final result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
-    await _db.collection('users').doc(res.user!.uid).set({
-      'fullName': fullName,
+    await _db.collection('users').doc(result.user!.uid).set({
       'email': email,
+      'fullName': fullName,
       'phone': phone,
       'profileCompleted': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    return res.user!;
+    return result.user;
   }
 
-  // COMPLETE PROFILE
+  // ================= PROFILE CHECK =================
+  Future<bool> isProfileCompleted(String uid) async {
+    final doc = await _db.collection('users').doc(uid).get();
+    return doc.exists && doc.data()?['profileCompleted'] == true;
+  }
+
+  // ================= COMPLETE PROFILE =================
   Future<void> completeProfile({
     required String uid,
     required String gender,
     required DateTime birthDate,
     required String address,
+    required String photoUrl,
   }) async {
     await _db.collection('users').doc(uid).update({
       'gender': gender,
       'birthDate': birthDate,
       'address': address,
+      'photoUrl': photoUrl,
       'profileCompleted': true,
     });
   }

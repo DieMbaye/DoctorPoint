@@ -126,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    SetupProfileScreen(uid: user.uid),
+                                    SetupProfileScreen(uid: user!.uid),
                               ),
                             );
                           } catch (e) {
