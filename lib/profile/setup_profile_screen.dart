@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+
 import '../services/auth_service.dart';
 import '../home/home_screen.dart';
 import '../core/constants/app_colors.dart';
@@ -19,121 +19,158 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   String? gender;
   DateTime? birthDate;
   final addressCtrl = TextEditingController();
-  File? imageFile;
 
-  Future<void> pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+  bool loading = false;
 
-    if (picked != null) {
-      setState(() => imageFile = File(picked.path));
+  /// 📅 DATE PICKER
+  Future<void> pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      locale: const Locale('fr'),
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+
+    if (date != null) {
+      setState(() => birthDate = date);
+    }
+  }
+
+  /// ✅ SUBMIT
+  Future<void> submit() async {
+    if (gender == null || birthDate == null || addressCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez compléter tous les champs')),
+      );
+      return;
+    }
+
+    setState(() => loading = true);
+
+    try {
+      await auth.completeProfile(
+        uid: widget.uid,
+        gender: gender!,
+        birthDate: birthDate!,
+        address: addressCtrl.text.trim(),
+      );
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen(userName: '',)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur : $e')),
+      );
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Configurer le profil'),
         backgroundColor: AppColors.primary,
+        elevation: 0,
+        title: const Text('Configurer le profil'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: pickImage,
-              child: CircleAvatar(
-                radius: 55,
-                backgroundColor: Colors.grey.shade300,
-                backgroundImage:
-                    imageFile != null ? FileImage(imageFile!) : null,
-                child: imageFile == null
-                    ? const Icon(Icons.camera_alt, size: 30)
-                    : null,
+            // TITRE
+            const Text(
+              'Informations personnelles',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
+            const Text(
+              'Veuillez compléter votre profil pour continuer',
+              style: TextStyle(color: Colors.grey),
+            ),
+
+            const SizedBox(height: 32),
+
+            // GENRE
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Genre'),
+              value: gender,
+              decoration: InputDecoration(
+                labelText: 'Genre',
+                prefixIcon: const Icon(Icons.person),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               items: const [
                 DropdownMenuItem(value: 'Homme', child: Text('Homme')),
                 DropdownMenuItem(value: 'Femme', child: Text('Femme')),
               ],
-              onChanged: (v) => gender = v,
+              onChanged: (v) => setState(() => gender = v),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
+            // DATE DE NAISSANCE
             TextFormField(
               readOnly: true,
-              decoration: const InputDecoration(
+              onTap: pickDate,
+              decoration: InputDecoration(
                 labelText: 'Date de naissance',
-                prefixIcon: Icon(Icons.calendar_today),
-              ),
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  firstDate: DateTime(1900),
-                  lastDate: DateTime.now(),
-                );
-                if (date != null) setState(() => birthDate = date);
-              },
-              controller: TextEditingController(
-                text: birthDate == null
-                    ? ''
-                    : '${birthDate!.day}/${birthDate!.month}/${birthDate!.year}',
+                prefixIcon: const Icon(Icons.calendar_today),
+                hintText: birthDate == null
+                    ? 'Choisir une date'
+                    : DateFormat('dd/MM/yyyy').format(birthDate!),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
+            // ADRESSE
             TextField(
               controller: addressCtrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Adresse',
-                prefixIcon: Icon(Icons.location_on),
+                prefixIcon: const Icon(Icons.location_on),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
 
-            const Spacer(),
+            const SizedBox(height: 40),
 
+            // BOUTON
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
+                onPressed: loading ? null : submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
                 ),
-                onPressed: () async {
-                  if (gender == null ||
-                      birthDate == null ||
-                      addressCtrl.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Veuillez remplir tous les champs'),
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Terminer',
+                        style: TextStyle(fontSize: 16),
                       ),
-                    );
-                    return;
-                  }
-
-                  await auth.completeProfile(
-                    uid: widget.uid,
-                    gender: gender!,
-                    birthDate: birthDate!,
-                    address: addressCtrl.text.trim(),
-                    photoUrl: '', // plus tard Firebase Storage
-                  );
-
-                  if (!mounted) return;
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
-                  );
-                },
-                child: const Text('Terminer'),
               ),
             ),
           ],

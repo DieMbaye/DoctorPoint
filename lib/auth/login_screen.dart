@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../home/home_screen.dart';
 import '../core/constants/app_colors.dart';
@@ -30,7 +31,11 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            const SizedBox(height: 40),
+
+            /// LOGO
             Image.asset('assets/images/logo.png', height: 90),
+
             const SizedBox(height: 24),
 
             const Text(
@@ -40,8 +45,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 32),
 
+            /// EMAIL
             TextField(
               controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
                 labelText: 'Adresse email',
                 prefixIcon: Icon(Icons.email),
@@ -50,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 16),
 
+            /// PASSWORD
             TextField(
               controller: passCtrl,
               obscureText: hidePassword,
@@ -58,7 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 prefixIcon: const Icon(Icons.lock),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    hidePassword ? Icons.visibility_off : Icons.visibility,
+                    hidePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
                   ),
                   onPressed: () {
                     setState(() => hidePassword = !hidePassword);
@@ -69,39 +79,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 32),
 
+            /// BUTTON
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-                onPressed: loading
-                    ? null
-                    : () async {
-                        setState(() => loading = true);
-                        try {
-                          await auth.login(
-                            email: emailCtrl.text.trim(),
-                            password: passCtrl.text.trim(),
-                          );
-
-                          if (!mounted) return;
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const HomeScreen(),
-                            ),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Email ou mot de passe incorrect'),
-                            ),
-                          );
-                        }
-                        setState(() => loading = false);
-                      },
+                onPressed: loading ? null : _login,
                 child: loading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Se connecter'),
@@ -111,5 +100,31 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _login() async {
+    setState(() => loading = true);
+    try {
+      final user = await auth.login(
+        email: emailCtrl.text.trim(),
+        password: passCtrl.text.trim(),
+      );
+
+      final profile = await auth.getUserProfile(user.uid);
+      final fullName = profile['fullName'] ?? 'Utilisateur';
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => HomeScreen(userName: fullName),
+        ),
+      );
+    } on FirebaseAuthException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Identifiants incorrects')),
+      );
+    }
+    setState(() => loading = false);
   }
 }
