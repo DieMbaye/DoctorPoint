@@ -38,6 +38,8 @@ dependencies:
   cloud_firestore: ^4.15.0
   image_picker: ^1.0.7
   firebase_storage: ^11.6.5
+  pdf: ^3.10.6
+  printing: ^5.11.0
 
 
 

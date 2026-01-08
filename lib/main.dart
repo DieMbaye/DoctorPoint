@@ -19,56 +19,53 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   runApp(const DoctorPointApp());
 }
 
 class DoctorPointApp extends StatelessWidget {
   const DoctorPointApp({super.key});
 
+  static const Color primaryGreen = Color(0xFF16A085); // ✅ VERT UNIQUE
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      // 🌍 LOCALISATION (IMPORTANT POUR DatePicker)
       locale: const Locale('fr'),
-      supportedLocales: const [
-        Locale('fr'),
-      ],
+      supportedLocales: const [Locale('fr')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      // 🎨 THEME GLOBAL (VERT / BLANC)
       theme: ThemeData(
-        primaryColor: const Color(0xFF16A085),
+        primaryColor: primaryGreen,
         scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF16A085),
+          backgroundColor: primaryGreen,
           foregroundColor: Colors.white,
           elevation: 0,
+          centerTitle: true,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF16A085),
+            backgroundColor: primaryGreen,
             foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 52),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
             ),
-            minimumSize: const Size(double.infinity, 50),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
 
-      // 🚀 POINT D’ENTRÉE UNIQUE
       home: const Root(),
     );
   }
@@ -76,7 +73,6 @@ class DoctorPointApp extends StatelessWidget {
 
 ///
 /// 🎯 ROOT
-/// Décide automatiquement où envoyer l’utilisateur
 ///
 class Root extends StatelessWidget {
   const Root({super.key});
@@ -86,30 +82,23 @@ class Root extends StatelessWidget {
     return FutureBuilder<String>(
       future: AuthService().handleStart(),
       builder: (context, snapshot) {
-        // ⏳ Chargement
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SplashScreen();
         }
 
-        // ❌ Erreur ou aucune donnée
         if (!snapshot.hasData) {
           return const LoginScreen();
         }
 
-        // 🔀 Navigation contrôlée
         switch (snapshot.data) {
           case 'onboarding':
             return const OnboardingScreen();
-
           case 'login':
             return const LoginScreen();
-
           case 'setup':
             return const SetupProfileScreen(uid: '');
-
           case 'home':
             return const HomeScreen(userName: '');
-
           default:
             return const LoginScreen();
         }
