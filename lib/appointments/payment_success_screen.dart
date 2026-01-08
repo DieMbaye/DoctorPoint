@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
 import '../core/constants/app_colors.dart';
 import '../calls/voice_call_screen.dart';
 import '../calls/video_call_screen.dart';
 import '../chat/chat_screen.dart';
 import '../home/home_screen.dart';
 
-class PaymentSuccessScreen extends StatelessWidget {
-  final String consultationType; // voice | video | message
+class PaymentSuccessScreen extends StatefulWidget {
+  final String consultationType;
   final String doctorId;
   final String doctorName;
   final String doctorPhoto;
   final int price;
   final String date;
   final String time;
+  final String paymentMethod;
+  final String method;
 
   const PaymentSuccessScreen({
     super.key,
@@ -25,11 +24,20 @@ class PaymentSuccessScreen extends StatelessWidget {
     required this.doctorPhoto,
     required this.price,
     required this.date,
-    required this.time, required String paymentMethod, required String method,
+    required this.time,
+    required this.paymentMethod,
+    required this.method,
   });
 
+  @override
+  State<PaymentSuccessScreen> createState() => _PaymentSuccessScreenState();
+}
+
+class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
+  bool _isLoading = false;
+
   String get typeLabel {
-    switch (consultationType) {
+    switch (widget.consultationType) {
       case 'voice':
         return 'Appel vocal';
       case 'video':
@@ -41,122 +49,277 @@ class PaymentSuccessScreen extends StatelessWidget {
     }
   }
 
-  void _startSession(BuildContext context) {
-    if (consultationType == 'voice') {
+  IconData get typeIcon {
+    switch (widget.consultationType) {
+      case 'voice':
+        return Icons.call_rounded;
+      case 'video':
+        return Icons.videocam_rounded;
+      case 'message':
+        return Icons.chat_bubble_rounded;
+      default:
+        return Icons.medical_services_rounded;
+    }
+  }
+
+  void _startSession() async {
+    setState(() => _isLoading = true);
+    
+    // Simuler un petit délai
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (widget.consultationType == 'voice') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => VoiceCallScreen(
-            doctorId: doctorId,
-            doctorName: doctorName,
-            doctorPhoto: doctorPhoto,
+            doctorId: widget.doctorId,
+            doctorName: widget.doctorName,
+            doctorPhoto: widget.doctorPhoto,
           ),
         ),
       );
-    }
-
-    if (consultationType == 'video') {
+    } else if (widget.consultationType == 'video') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => VideoCallScreen(
-            doctorId: doctorId,
-            doctorName: doctorName,
-            doctorPhoto: doctorPhoto,
+            doctorId: widget.doctorId,
+            doctorName: widget.doctorName,
+            doctorPhoto: widget.doctorPhoto,
           ),
         ),
       );
-    }
-
-    if (consultationType == 'message') {
+    } else if (widget.consultationType == 'message') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => ChatScreen(
-            doctorId: doctorId,
-            doctorName: doctorName,
-            doctorPhoto: doctorPhoto,
+            doctorId: widget.doctorId,
+            doctorName: widget.doctorName,
+            doctorPhoto: widget.doctorPhoto,
           ),
         ),
       );
     }
   }
 
+  void _goToHome() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(userName: 'Utilisateur'),
+      ),
+      (_) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(30),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.check_circle,
-                  size: 90, color: AppColors.primary),
-              const SizedBox(height: 20),
-
-              Text(
-                '$typeLabel confirmé',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              /// Success Animation/Icon
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.check_rounded,
+                        size: 48,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 32),
 
+              /// Success Title
               Text(
-                'Paiement réussi • $price FCFA',
-                style: const TextStyle(color: Colors.grey),
+                'Paiement réussi !',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.5,
+                ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 12),
 
+              /// Success Message
+              Text(
+                'Votre $typeLabel est confirmé',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                '${widget.price} FCFA • ${widget.method}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              /// Appointment Details Card
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    _infoRow('Médecin', doctorName),
-                    _infoRow('Date', date),
-                    _infoRow('Heure', time),
+                    _detailRow(
+                      Icons.person_rounded,
+                      'Médecin',
+                      widget.doctorName,
+                    ),
+                    const SizedBox(height: 20),
+                    _detailRow(
+                      Icons.calendar_month_rounded,
+                      'Date',
+                      widget.date,
+                    ),
+                    const SizedBox(height: 20),
+                    _detailRow(
+                      Icons.access_time_rounded,
+                      'Heure',
+                      widget.time,
+                    ),
+                    const SizedBox(height: 20),
+                    _detailRow(
+                      typeIcon,
+                      'Consultation',
+                      typeLabel,
+                    ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 40),
 
-              ElevatedButton(
-                onPressed: () => _startSession(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  minimumSize: const Size(double.infinity, 50),
-                ),
-                child: Text(
-                  consultationType == 'message'
-                      ? 'Ouvrir la messagerie'
-                      : 'Démarrer $typeLabel',
+              /// Start Session Button
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _startSession,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              typeIcon,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              widget.consultationType == 'message'
+                                  ? 'Ouvrir la messagerie'
+                                  : 'Démarrer $typeLabel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              TextButton(
-                onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const HomeScreen(userName: 'Utilisateur'),
+              /// Home Button
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: TextButton(
+                  onPressed: _goToHome,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    (_) => false,
-                  );
-                },
-                child: const Text('Retour à l’accueil'),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.home_rounded,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Retour à l\'accueil',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -165,20 +328,47 @@ class PaymentSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style:
-                  const TextStyle(color: Colors.grey, fontSize: 13)),
-          Text(value,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.primary,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

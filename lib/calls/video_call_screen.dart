@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../core/constants/app_colors.dart';
 import '../home/home_screen.dart';
+import 'call_ended_screen.dart';
 
 class VideoCallScreen extends StatefulWidget {
   final String doctorId;
@@ -25,6 +25,9 @@ class VideoCallScreen extends StatefulWidget {
 class _VideoCallScreenState extends State<VideoCallScreen> {
   late Timer _timer;
   int seconds = 0;
+  bool isMuted = false;
+  bool isVideoOff = false;
+  bool isSpeakerOn = true;
 
   @override
   void initState() {
@@ -43,35 +46,20 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     await FirebaseFirestore.instance.collection('notifications').add({
       'userId': FirebaseAuth.instance.currentUser!.uid,
       'title': 'Appel vidéo terminé',
-      'message':
-          'Votre appel vidéo avec ${widget.doctorName} est terminé avec succès.',
+      'message': 'Votre appel vidéo avec ${widget.doctorName} est terminé avec succès.',
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text('Succès'),
-        content: const Text('Appel vidéo terminé avec succès.'),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      const HomeScreen(userName: 'Utilisateur'),
-                ),
-                (_) => false,
-              );
-            },
-            child: const Text('OK'),
-          ),
-        ],
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CallEndedScreen(
+          doctorName: widget.doctorName,
+          type: 'video',
+        ),
       ),
     );
   }
@@ -88,81 +76,221 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // vidéo médecin (simulée)
+          /// Doctor's Video (Simulated)
           Positioned.fill(
-            child: Image.network(
-              widget.doctorPhoto,
-              fit: BoxFit.cover,
+            child: Container(
+              color: Colors.black,
+              child: widget.doctorPhoto.isNotEmpty
+                  ? Image.network(
+                      widget.doctorPhoto,
+                      fit: BoxFit.cover,
+                      color: Colors.black.withOpacity(0.3),
+                      colorBlendMode: BlendMode.darken,
+                    )
+                  : Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.medical_services_rounded,
+                            size: 80,
+                            color: Colors.white.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            widget.doctorName,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
             ),
           ),
 
-          // caméra utilisateur simulée
+          /// User's Camera Preview
           Positioned(
-            top: 40,
+            top: 60,
             right: 20,
             child: Container(
-              width: 100,
-              height: 140,
+              width: 120,
+              height: 160,
               decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 2,
+                ),
               ),
-              child: const Icon(Icons.person,
-                  color: Colors.white, size: 50),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.person_rounded,
+                    color: Colors.white.withOpacity(0.7),
+                    size: 40,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Vous',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
+          /// Header Info
           Positioned(
-            top: 50,
+            top: 60,
             left: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.doctorName,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.doctorName,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold)),
-                Text(time,
-                    style:
-                        const TextStyle(color: Colors.white70)),
-              ],
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Appel vidéo • $time',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
+          /// Call Controls
           Positioned(
             bottom: 40,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.white24,
-                  child:
-                      const Icon(Icons.mic_off, color: Colors.white),
-                ),
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: Colors.red,
-                  child: IconButton(
-                    icon: const Icon(Icons.call_end,
-                        color: Colors.white),
-                    onPressed: _endCall,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  /// Mute Button
+                  _callControlButton(
+                    icon: isMuted ? Icons.mic_off_rounded : Icons.mic_rounded,
+                    label: isMuted ? 'Son coupé' : 'Couper le son',
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    onPressed: () => setState(() => isMuted = !isMuted),
                   ),
-                ),
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Colors.white24,
-                  child: const Icon(Icons.videocam_off,
-                      color: Colors.white),
-                ),
-              ],
+
+                  /// Video Toggle
+                  _callControlButton(
+                    icon: isVideoOff ? Icons.videocam_off_rounded : Icons.videocam_rounded,
+                    label: isVideoOff ? 'Caméra éteinte' : 'Éteindre la caméra',
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    onPressed: () => setState(() => isVideoOff = !isVideoOff),
+                  ),
+
+                  /// End Call Button
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.5),
+                          blurRadius: 15,
+                          spreadRadius: 3,
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.call_end_rounded,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                      onPressed: _endCall,
+                    ),
+                  ),
+
+                  /// Speaker Button
+                  _callControlButton(
+                    icon: isSpeakerOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                    label: isSpeakerOn ? 'Haut-parleur activé' : 'Activer haut-parleur',
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    onPressed: () => setState(() => isSpeakerOn = !isSpeakerOn),
+                  ),
+
+                  /// More Options
+                  _callControlButton(
+                    icon: Icons.more_vert_rounded,
+                    label: 'Plus d\'options',
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    onPressed: () {
+                      // TODO: Show more options menu
+                    },
+                  ),
+                ],
+              ),
             ),
-          )
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _callControlButton({
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required VoidCallback onPressed,
+  }) {
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            icon: Icon(
+              icon,
+              color: Colors.white,
+              size: 24,
+            ),
+            onPressed: onPressed,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 10,
+          ),
+        ),
+      ],
     );
   }
 }
