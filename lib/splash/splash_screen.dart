@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import '../auth/login_screen.dart';
-import '../auth/register_screen.dart';
-import '../home/home_screen.dart';
-import '../profile/setup_profile_screen.dart';
-import '../onboarding/onboarding_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../auth/login_screen.dart';
+import '../home/home_screen.dart';
+import '../onboarding/onboarding_screen.dart';
+import '../profile/setup_profile_screen.dart';
+import '../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,7 +15,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final AuthService auth = AuthService();
+  final AuthService authService = AuthService();
 
   @override
   void initState() {
@@ -26,11 +26,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _start() async {
     await Future.delayed(const Duration(seconds: 2));
 
-    final result = await auth.handleStart();
+    final result = await authService.handleStart();
+    final user = FirebaseAuth.instance.currentUser;
 
     if (!mounted) return;
-
-    final user = FirebaseAuth.instance.currentUser;
 
     switch (result) {
       case 'onboarding':
@@ -52,7 +51,9 @@ class _SplashScreenState extends State<SplashScreen> {
       case 'home':
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen(userName: '',)),
+          MaterialPageRoute(
+            builder: (_) => const HomeScreen(userName: ''),
+          ),
         );
         break;
 
@@ -66,10 +67,24 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.white,
+    return Scaffold(
+      backgroundColor: Colors.white, // ✅ FOND BLANC
       body: Center(
-        child: CircularProgressIndicator(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            /// 🖼️ LOGO OFFICIEL
+            Image.asset(
+              'assets/images/logo.png',
+              width: 160,
+              fit: BoxFit.contain,
+            ),
+
+            const SizedBox(height: 40),
+
+            const CircularProgressIndicator(),
+          ],
+        ),
       ),
     );
   }

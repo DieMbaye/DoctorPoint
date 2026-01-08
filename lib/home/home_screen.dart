@@ -1,3 +1,4 @@
+import 'package:doctor_point/settings/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_colors.dart';
@@ -5,6 +6,8 @@ import '../doctors/doctor_detail_screen.dart';
 import '../profile/profile_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../notifications/notifications_screen.dart';
+import '../appointments/appointments_screen.dart';
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -239,16 +242,30 @@ StreamBuilder<QuerySnapshot>(
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) {
-            setState(() => _currentIndex = index);
-            if (index == 3) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfileScreen(),
-                ),
-              );
-            }
-          },
+  setState(() => _currentIndex = index);
+
+  if (index == 1) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
+    );
+  }
+
+  if (index == 2) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+  }
+
+  if (index == 3) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+    );
+  }
+},
+
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           selectedItemColor: AppColors.primary,
@@ -274,8 +291,8 @@ StreamBuilder<QuerySnapshot>(
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.chat_outlined),
-              activeIcon: Icon(Icons.chat),
-              label: 'Messages',
+              activeIcon: Icon(Icons.settings),
+              label: 'Paramètres',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
