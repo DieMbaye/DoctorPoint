@@ -108,8 +108,10 @@ class _PaymentSuccessScreenState extends State<PaymentSuccessScreen> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (_) => HomeScreen(userName: 'Utilisateur'),
-      ),
+builder: (_) => const HomeScreen(
+  userName: 'Utilisateur',
+  role: 'patient',
+),      ),
       (_) => false,
     );
   }

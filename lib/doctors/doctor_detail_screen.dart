@@ -44,80 +44,61 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('doctors')
-          .doc(widget.doctorId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
+    return Scaffold(
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('medecin')
+            .doc(widget.doctorId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
               child: CircularProgressIndicator(color: AppColors.primary),
-            ),
-          );
-        }
+            );
+          }
 
-        if (!snapshot.data!.exists) {
-          return Scaffold(
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              leading: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            body: Center(
-              child: Text(
-                'Médecin introuvable',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
-          );
-        }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return Center(
+              child: Text('Médecin introuvable'),
+            );
+          }
 
-        final data = snapshot.data!.data() as Map<String, dynamic>;
+          final data = snapshot.data!.data() as Map<String, dynamic>;
 
-        final String fullName = data['fullName'] ?? '';
-        final String specialty = data['specialty'] ?? '';
-        final String hospital = data['hospital'] ?? '';
-        final String about = data['about'] ?? '';
-        final String? photoUrl = data['photoUrls'];
+          final String fullName = data['fullName'] ?? 'Dr. Inconnu';
+          final String specialty = data['specialty'] ?? 'Médecin généraliste';
+          final String hospital = data['hospital'] ?? 'Hôpital non spécifié';
+          final String about = data['about'] ?? '';
+          final String? photoUrl = data['photoUrls'];
+          final int experienceYears = data['experienceYears'] ?? 0;
+          final double rating = (data['rating'] as num?)?.toDouble() ?? 4.0;
 
-        final List<String> workingDays =
-            List<String>.from(data['workingDays'] ?? []);
+          final List<String> workingDays =
+              List<String>.from(data['workingDays'] ?? []);
+          final List<String> workingHours =
+              List<String>.from(data['workingHours'] ?? []);
 
-        final List<String> workingHours =
-            List<String>.from(data['workingHours'] ?? []);
+          final Map<String, dynamic> fees =
+              Map<String, dynamic>.from(data['fees'] ?? {});
 
-        final Map<String, dynamic> fees =
-            Map<String, dynamic>.from(data['fees'] ?? {});
+          final int voiceFee = fees['voice'] ?? 5000;
+          final int messageFee = fees['message'] ?? 3000;
+          final int videoFee = fees['video'] ?? 10000;
 
-        final int voiceFee = fees['voice'] ?? 0;
-        final int messageFee = fees['message'] ?? 0;
-        final int videoFee = fees['video'] ?? 0;
+          // Mettre à jour le prix sans setState pour éviter le rebuild complet
+          int currentPrice = selectedPrice;
+          if (selectedType == 'voice') currentPrice = voiceFee;
+          if (selectedType == 'message') currentPrice = messageFee;
+          if (selectedType == 'video') currentPrice = videoFee;
 
-        // prix dynamique
-        if (selectedType == 'voice') selectedPrice = voiceFee;
-        if (selectedType == 'message') selectedPrice = messageFee;
-        if (selectedType == 'video') selectedPrice = videoFee;
-
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          body: CustomScrollView(
+          return CustomScrollView(
             controller: _scrollController,
             slivers: [
               /// App Bar
               SliverAppBar(
                 expandedHeight: 320,
                 pinned: true,
+                floating: false,
                 backgroundColor: Colors.transparent,
                 leading: Container(
                   margin: const EdgeInsets.only(left: 16, top: 12),
@@ -159,12 +140,27 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           fit: BoxFit.cover,
                           color: Colors.black.withOpacity(0.2),
                           colorBlendMode: BlendMode.darken,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: AppColors.primary,
+                              child: Center(
+                                child: Text(
+                                  fullName.isNotEmpty ? fullName[0] : 'D',
+                                  style: TextStyle(
+                                    fontSize: 64,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         )
                       : Container(
                           color: AppColors.primary,
                           child: Center(
                             child: Text(
-                              fullName[0],
+                              fullName.isNotEmpty ? fullName[0] : 'D',
                               style: TextStyle(
                                 fontSize: 64,
                                 fontWeight: FontWeight.bold,
@@ -213,7 +209,6 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                       ),
                       const SizedBox(height: 20),
                       
-                      /// Rating and Experience
                       Row(
                         children: [
                           Container(
@@ -234,7 +229,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '4.8',
+                                  rating.toStringAsFixed(1),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -261,7 +256,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  '10+ ans',
+                                  '$experienceYears ans',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.primary,
@@ -299,7 +294,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                       Text(
                         about.isNotEmpty
                             ? about
-                            : 'Docteur spécialisé avec de nombreuses années d\'expérience dans le domaine médical. Disponible pour des consultations en ligne.',
+                            : 'Docteur spécialisé avec $experienceYears années d\'expérience dans le domaine médical. Disponible pour des consultations en ligne.',
                         style: TextStyle(
                           fontSize: 15,
                           color: AppColors.textSecondary,
@@ -327,151 +322,137 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      /// Choose Date
-                      Text(
-                        'Choisir une date',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildDates(workingDays),
-                      
-                      const SizedBox(height: 30),
-                      
-                      /// Choose Time
-                      Text(
-                        'Choisir une heure',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildHours(workingHours),
-                      
-                      const SizedBox(height: 30),
-                      
-                      /// Consultation Type
-                      Text(
-                        'Type de consultation',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _typeCard(
-                        icon: Icons.phone_rounded,
-                        label: 'Appel vocal',
-                        description: 'Consultation téléphonique',
-                        price: voiceFee,
-                        value: 'voice',
-                      ),
-                      const SizedBox(height: 12),
-                      _typeCard(
-                        icon: Icons.chat_bubble_rounded,
-                        label: 'Messagerie',
-                        description: 'Chat en direct',
-                        price: messageFee,
-                        value: 'message',
-                      ),
-                      const SizedBox(height: 12),
-                      _typeCard(
-                        icon: Icons.videocam_rounded,
-                        label: 'Appel vidéo',
-                        description: 'Visio-consultation',
-                        price: videoFee,
-                        value: 'video',
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      /// Book Appointment Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: selectedDate != null &&
-                                  selectedHour != null &&
-                                  selectedPrice > 0
-                              ? () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => PatientDetailsScreen(
-                                        doctorId: widget.doctorId,
-                                        doctorName: fullName,
-                                        consultationType: selectedType,
-                                        price: selectedPrice,
-                                        date: DateFormat('dd/MM/yyyy')
-                                            .format(selectedDate!),
-                                        time: selectedHour!,
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: selectedDate != null &&
-                                    selectedHour != null &&
-                                    selectedPrice > 0
-                                ? AppColors.primary
-                                : AppColors.primary.withOpacity(0.3),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                  child: StatefulBuilder(
+                    builder: (context, setState) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          /// Choose Date
+                          Text(
+                            'Choisir une date',
+                            key: const ValueKey('date_section'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
                             ),
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.calendar_month_rounded,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Prendre rendez-vous',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                '$selectedPrice FCFA',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 16),
+                          _buildDates(workingDays, setState),
+                          
+                          const SizedBox(height: 30),
+                          
+                          /// Choose Time
+                          Text(
+                            'Choisir une heure',
+                            key: const ValueKey('time_section'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
+                          const SizedBox(height: 16),
+                          _buildHours(workingHours, setState),
+                          
+                          const SizedBox(height: 30),
+                          
+                          /// Consultation Type
+                          Text(
+                            'Type de consultation',
+                            key: const ValueKey('type_section'),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTypeSelector(voiceFee, messageFee, videoFee, setState),
+                          
+                          const SizedBox(height: 32),
+                          
+                          /// Book Appointment Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: selectedDate != null &&
+                                      selectedHour != null &&
+                                      currentPrice > 0
+                                  ? () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => PatientDetailsScreen(
+                                            doctorId: widget.doctorId,
+                                            doctorName: fullName,
+                                            consultationType: selectedType,
+                                            price: currentPrice,
+                                            date: DateFormat('dd/MM/yyyy')
+                                                .format(selectedDate!),
+                                            time: selectedHour!,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: selectedDate != null &&
+                                        selectedHour != null &&
+                                        currentPrice > 0
+                                    ? AppColors.primary
+                                    : AppColors.primary.withOpacity(0.3),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.calendar_month_rounded, size: 22),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Prendre rendez-vous',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '$currentPrice FCFA',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
+
+              /// Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 20),
+              ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
-  /// ================== DATES ==================
-  Widget _buildDates(List<String> workingDays) {
+  /// Dates
+  Widget _buildDates(List<String> workingDays, Function setState) {
     if (workingDays.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -482,9 +463,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         child: Center(
           child: Text(
             'Aucune date disponible cette semaine',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
         ),
       );
@@ -495,26 +474,30 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         .toList();
 
     final now = DateTime.now();
-
     final dates = List.generate(21, (i) => now.add(Duration(days: i)))
         .where((date) {
-          final day =
-              DateFormat('EEE', 'fr_FR').format(date).toLowerCase();
-          return normalizedDays
-              .contains(day.replaceAll('.', '').trim());
+          final day = DateFormat('EEE', 'fr_FR').format(date).toLowerCase();
+          return normalizedDays.contains(day.replaceAll('.', '').trim());
         })
         .toList();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: dates.map((date) {
+    return SizedBox(
+      height: 140,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: dates.length,
+        itemBuilder: (context, index) {
+          final date = dates[index];
           final isSelected = selectedDate != null &&
               DateFormat('yyyy-MM-dd').format(date) ==
                   DateFormat('yyyy-MM-dd').format(selectedDate!);
 
           return GestureDetector(
-            onTap: () => setState(() => selectedDate = date),
+            onTap: () {
+              setState(() {
+                selectedDate = date;
+              });
+            },
             child: Container(
               width: 100,
               margin: const EdgeInsets.only(right: 12),
@@ -523,20 +506,9 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 color: isSelected ? AppColors.primary : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.border,
+                  color: isSelected ? AppColors.primary : AppColors.border,
                   width: 1.5,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : [],
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -572,13 +544,13 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }
 
-  /// ================== HEURES ==================
-  Widget _buildHours(List<String> hours) {
+  /// Heures
+  Widget _buildHours(List<String> hours, Function setState) {
     if (hours.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -589,9 +561,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
         child: Center(
           child: Text(
             'Aucune heure disponible',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-            ),
+            style: TextStyle(color: AppColors.textSecondary),
           ),
         ),
       );
@@ -603,28 +573,20 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
       children: hours.map((h) {
         final isSelected = selectedHour == h;
         return GestureDetector(
-          onTap: () => setState(() => selectedHour = h),
+          onTap: () {
+            setState(() {
+              selectedHour = h;
+            });
+          },
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.border,
+                color: isSelected ? AppColors.primary : AppColors.border,
                 width: 1.5,
               ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : [],
             ),
             child: Text(
               h,
@@ -640,94 +602,80 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     );
   }
 
-  /// ================== TYPE ==================
-  Widget _typeCard({
+  /// Type selector
+  Widget _buildTypeSelector(int voiceFee, int messageFee, int videoFee, Function setState) {
+    return Column(
+      children: [
+        _buildTypeCard(
+          icon: Icons.phone_rounded,
+          label: 'Appel vocal',
+          price: voiceFee,
+          value: 'voice',
+          setState: setState,
+        ),
+        const SizedBox(height: 12),
+        _buildTypeCard(
+          icon: Icons.chat_bubble_rounded,
+          label: 'Messagerie',
+          price: messageFee,
+          value: 'message',
+          setState: setState,
+        ),
+        const SizedBox(height: 12),
+        _buildTypeCard(
+          icon: Icons.videocam_rounded,
+          label: 'Appel vidéo',
+          price: videoFee,
+          value: 'video',
+          setState: setState,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTypeCard({
     required IconData icon,
     required String label,
-    required String description,
     required int price,
     required String value,
+    required Function setState,
   }) {
     final selected = selectedType == value;
 
     return GestureDetector(
-      onTap: () => setState(() => selectedType = value),
+      onTap: () {
+        setState(() {
+          selectedType = value;
+        });
+      },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected
-                ? AppColors.primary
-                : AppColors.border,
+            color: selected ? AppColors.primary : AppColors.border,
             width: 1.5,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
         ),
         child: Row(
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: selected
-                    ? Colors.white.withOpacity(0.2)
-                    : AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                icon,
-                color: selected ? Colors.white : AppColors.primary,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 16),
+            Icon(icon, color: selected ? Colors.white : AppColors.primary),
+            const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: selected ? Colors.white : AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: selected
-                          ? Colors.white.withOpacity(0.9)
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: selected ? Colors.white : AppColors.textPrimary,
+                ),
               ),
             ),
-            const SizedBox(width: 16),
             Text(
               '$price FCFA',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : AppColors.primary,
               ),
             ),

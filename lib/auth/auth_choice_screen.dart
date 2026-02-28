@@ -25,16 +25,9 @@ class AuthChoiceScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Top Spacing
                   SizedBox(height: isTablet ? 40 : 20),
-                  
-                  // Header Section
                   _buildHeaderSection(),
-                  
-                  // Main Content
                   _buildMainContent(context, size),
-                  
-                  // Bottom Spacing
                   SizedBox(height: isTablet ? 60 : 40),
                 ],
               ),
@@ -48,7 +41,6 @@ class AuthChoiceScreen extends StatelessWidget {
   Widget _buildHeaderSection() {
     return Column(
       children: [
-        // Welcome Message
         Text(
           'Bienvenue sur',
           style: TextStyle(
@@ -57,10 +49,7 @@ class AuthChoiceScreen extends StatelessWidget {
             fontWeight: FontWeight.w400,
           ),
         ),
-        
         const SizedBox(height: 8),
-        
-        // App Name
         Text(
           'DOCTORPOINT',
           style: TextStyle(
@@ -70,10 +59,7 @@ class AuthChoiceScreen extends StatelessWidget {
             letterSpacing: 1.5,
           ),
         ),
-        
         const SizedBox(height: 8),
-        
-        // Tagline
         Text(
           'Votre plateforme de rendez-vous médicaux',
           style: TextStyle(
@@ -94,27 +80,14 @@ class AuthChoiceScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Illustration/Logo Area
           _buildIllustrationArea(size),
-          
           const SizedBox(height: 40),
-          
-          // Description
           _buildDescription(),
-          
           const SizedBox(height: 40),
-          
-          // Action Buttons
           _buildActionButtons(context),
-          
           const SizedBox(height: 32),
-          
-          // Divider
           _buildDivider(),
-          
           const SizedBox(height: 32),
-          
-          // Secondary Options
           _buildSecondaryOptions(context),
         ],
       ),
@@ -144,7 +117,6 @@ class AuthChoiceScreen extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Decorative Elements
           Positioned(
             top: -20,
             right: -20,
@@ -157,7 +129,6 @@ class AuthChoiceScreen extends StatelessWidget {
               ),
             ),
           ),
-          
           Positioned(
             bottom: -15,
             left: -15,
@@ -170,8 +141,6 @@ class AuthChoiceScreen extends StatelessWidget {
               ),
             ),
           ),
-          
-          // Main Logo/Image
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -191,10 +160,7 @@ class AuthChoiceScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 24),
-                
-                // App Name Badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -241,9 +207,7 @@ class AuthChoiceScreen extends StatelessWidget {
               height: 1.5,
             ),
           ),
-          
           const SizedBox(height: 12),
-          
           Text(
             'Rejoignez notre communauté de patients et '
             'professionnels de santé pour une expérience médicale optimisée.',
@@ -262,11 +226,10 @@ class AuthChoiceScreen extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
-        // Register Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => _navigateTo(context, const RegisterScreen()),
+            onPressed: () => _navigateToRoleSelection(context, 'patient'),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
@@ -283,7 +246,7 @@ class AuthChoiceScreen extends StatelessWidget {
                 const Icon(Icons.person_add_alt_1_rounded, size: 22),
                 const SizedBox(width: 12),
                 Text(
-                  'Créer un compte gratuitement',
+                  'S\'inscrire comme Patient',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -296,11 +259,10 @@ class AuthChoiceScreen extends StatelessWidget {
         
         const SizedBox(height: 16),
         
-        // Login Button
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
-            onPressed: () => _navigateTo(context, const LoginScreen()),
+            onPressed: () => _navigateToRoleSelection(context, 'medecin'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primary,
               side: BorderSide(
@@ -316,13 +278,40 @@ class AuthChoiceScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.login_rounded, size: 22),
+                const Icon(Icons.medical_services_rounded, size: 22),
                 const SizedBox(width: 12),
                 Text(
-                  'Se connecter',
+                  'S\'inscrire comme Médecin',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () => _navigateTo(context, const LoginScreen()),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.login_rounded, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Déjà un compte ? Se connecter',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -368,7 +357,6 @@ class AuthChoiceScreen extends StatelessWidget {
   Widget _buildSecondaryOptions(BuildContext context) {
     return Column(
       children: [
-        // Guest Access
         SizedBox(
           width: double.infinity,
           child: TextButton(
@@ -413,7 +401,6 @@ class AuthChoiceScreen extends StatelessWidget {
         
         const SizedBox(height: 24),
         
-        // Terms
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: RichText(
@@ -449,6 +436,30 @@ class AuthChoiceScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _navigateToRoleSelection(BuildContext context, String role) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => RegisterScreen(initialRole: role),
+        transitionsBuilder: (_, animation, __, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOutCubic,
+              ),
+            ),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
     );
   }
 

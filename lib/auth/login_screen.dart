@@ -32,17 +32,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
                 _buildHeader(),
-                
                 const SizedBox(height: 40),
-                
-                // Logo Card
                 _buildLogoCard(),
-                
                 const SizedBox(height: 40),
-                
-                // Login Form
                 Form(
                   key: _formKey,
                   child: Column(
@@ -51,8 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 20),
                       _buildPasswordField(),
                       const SizedBox(height: 12),
-                      
-                      // Forgot Password
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -69,23 +60,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      
                       const SizedBox(height: 32),
-                      
-                      // Login Button
                       _buildLoginButton(),
                     ],
                   ),
                 ),
-                
                 const SizedBox(height: 40),
-                
-                // Divider
                 _buildDivider(),
-                
                 const SizedBox(height: 32),
-                
-                // Register Link
                 _buildRegisterLink(),
               ],
             ),
@@ -109,9 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
         ),
-        
         const SizedBox(height: 16),
-        
         Text(
           'Bienvenue de retour',
           style: TextStyle(
@@ -121,9 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
             letterSpacing: -0.5,
           ),
         ),
-        
         const SizedBox(height: 8),
-        
         Text(
           'Connectez-vous à votre compte DoctorPoint',
           style: TextStyle(
@@ -157,7 +135,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       child: Stack(
         children: [
-          // Decorative Elements
           Positioned(
             top: -10,
             right: -10,
@@ -170,8 +147,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          
-          // Logo & Brand
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -181,9 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 60,
                   fit: BoxFit.contain,
                 ),
-                
                 const SizedBox(height: 12),
-                
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -227,9 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color: AppColors.textPrimary,
           ),
         ),
-        
         const SizedBox(height: 8),
-        
         TextFormField(
           controller: emailCtrl,
           keyboardType: TextInputType.emailAddress,
@@ -288,9 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color: AppColors.textPrimary,
           ),
         ),
-        
         const SizedBox(height: 8),
-        
         TextFormField(
           controller: passCtrl,
           obscureText: hidePassword,
@@ -480,7 +449,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: Implémenter la réinitialisation
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -506,22 +474,29 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passCtrl.text.trim(),
       );
 
+      // 👈 Récupérer le profil complet pour avoir le rôle
       final profile = await auth.getUserProfile(user.uid);
       final fullName = profile['fullName'] ?? 'Utilisateur';
+      final role = profile['role'] ?? 'patient';
+
+      print('✅ Connexion réussie - Rôle: $role, Nom: $fullName'); // Debug
 
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomeScreen(userName: fullName),
+          builder: (_) => HomeScreen(
+            userName: fullName,
+            role: role, // 👈 Passage du rôle dynamique
+          ),
         ),
       );
-    } on FirebaseAuthException {
+    } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Identifiants incorrects. Veuillez réessayer.',
+            e.message ?? 'Identifiants incorrects',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.red.shade600,
@@ -536,7 +511,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Erreur de connexion',
+            'Erreur de connexion: ${e.toString()}',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.red.shade600,

@@ -140,8 +140,10 @@ class CallEndedScreen extends StatelessWidget {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const HomeScreen(userName: 'Utilisateur'),
-                      ),
+builder: (_) => HomeScreen(
+  userName: '',
+  role: 'patient', // ou widget.role
+),                      ),
                       (_) => false,
                     );
                   },

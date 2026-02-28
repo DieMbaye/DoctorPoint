@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../core/constants/app_colors.dart';
-import 'payment_screen.dart';
+import '../services/notification_service.dart';
 
 class PatientDetailsScreen extends StatefulWidget {
   final String doctorId;
@@ -29,6 +32,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
   final ageCtrl = TextEditingController();
   String gender = 'Homme';
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   String get consultationTypeLabel {
     switch (widget.consultationType) {
@@ -41,6 +45,99 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
       default:
         return widget.consultationType;
     }
+  }
+
+  Future<void> _createAppointment() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('Utilisateur non connecté');
+
+      // Récupérer les informations du patient depuis Firestore
+      final patientDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      String patientName = nameCtrl.text.trim();
+      if (patientDoc.exists) {
+        final patientData = patientDoc.data() as Map<String, dynamic>;
+        patientName = patientData['fullName'] ?? patientName;
+      }
+
+      // Créer le rendez-vous dans Firestore
+      final appointmentRef = await FirebaseFirestore.instance
+          .collection('appointments')
+          .add({
+        'userId': user.uid,
+        'doctorId': widget.doctorId,
+        'doctorName': widget.doctorName,
+        'patientName': patientName,
+        'patientAge': int.tryParse(ageCtrl.text.trim()) ?? 0,
+        'patientGender': gender,
+        'date': widget.date,
+        'time': widget.time,
+        'consultationType': widget.consultationType,
+        'price': widget.price,
+        'status': 'pending', // En attente
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      print('✅ Rendez-vous créé avec ID: ${appointmentRef.id}');
+
+      // Créer une notification pour le médecin
+      await NotificationService.createNotification(
+        userId: widget.doctorId,
+        title: 'Nouvelle demande de rendez-vous',
+        message: '$patientName a demandé un rendez-vous le ${widget.date} à ${widget.time}',
+        type: 'appointment',
+        appointmentId: appointmentRef.id,
+      );
+
+      print('✅ Notification envoyée au médecin');
+
+      if (!mounted) return;
+
+      // Afficher un message de succès
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Rendez-vous confirmé avec succès !'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+
+      // Retourner à l'accueil après 2 secondes
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        }
+      });
+
+    } catch (e) {
+      print('❌ Erreur lors de la création du rendez-vous: $e');
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -121,7 +218,7 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Vérifiez les détails avant paiement',
+                                'Vérifiez les détails avant confirmation',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textSecondary,
@@ -368,28 +465,12 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
 
               const SizedBox(height: 40),
 
-              /// Proceed to Payment Button
+              /// Confirm Appointment Button
               SizedBox(
                 width: double.infinity,
                 height: 60,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PaymentScreen(
-                            doctorId: widget.doctorId,
-                            doctorName: widget.doctorName,
-                            consultationType: widget.consultationType,
-                            price: widget.price,
-                            date: widget.date,
-                            time: widget.time,
-                          ),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: _isLoading ? null : _createAppointment,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -399,23 +480,25 @@ class _PatientDetailsScreenState extends State<PatientDetailsScreen> {
                     elevation: 0,
                     shadowColor: Colors.transparent,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.payments_rounded,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Procéder au paiement',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Confirmer le rendez-vous',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
 

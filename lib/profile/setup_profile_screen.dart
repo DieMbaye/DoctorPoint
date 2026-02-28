@@ -6,7 +6,9 @@ import '../core/constants/app_colors.dart';
 
 class SetupProfileScreen extends StatefulWidget {
   final String uid;
-  const SetupProfileScreen({super.key, required this.uid});
+  const SetupProfileScreen({super.key, required this.uid, required String role});
+  
+  get role => null;
 
   @override
   State<SetupProfileScreen> createState() => _SetupProfileScreenState();
@@ -20,6 +22,8 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   DateTime? birthDate;
   final addressCtrl = TextEditingController();
   bool loading = false;
+  
+  get fullName => null;
 
   /// 📅 DATE PICKER
   Future<void> pickDate() async {
@@ -83,12 +87,16 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
         );
 
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HomeScreen(userName: ''),
-          ),
-        );
+      // Après avoir complété le profil
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (_) => HomeScreen(
+      userName: fullName,
+      role: widget.role, // 👈 Garder le rôle
+    ),
+  ),
+);
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

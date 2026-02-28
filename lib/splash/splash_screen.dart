@@ -40,22 +40,46 @@ class _SplashScreenState extends State<SplashScreen> {
         break;
 
       case 'setup':
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SetupProfileScreen(uid: user!.uid),
-          ),
-        );
+        // Récupérer le rôle de l'utilisateur
+        if (user != null) {
+          final role = await authService.getUserRole(user.uid);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SetupProfileScreen(
+                uid: user.uid,
+                role: role, // 👈 Ajout du rôle requis
+              ),
+            ),
+          );
+        } else {
+          // Si pas d'utilisateur, rediriger vers login
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        }
         break;
 
-      case 'home':
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const HomeScreen(userName: ''),
-          ),
-        );
-        break;
+      // Dans splash_screen.dart, assurez-vous de passer le rôle
+
+case 'home':
+  if (user != null) {
+    final profile = await authService.getUserProfile(user.uid);
+    final userName = profile['fullName'] ?? '';
+    final role = profile['role'] ?? 'patient';
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(
+          userName: userName,
+          role: role, // 👈 Passage du rôle
+        ),
+      ),
+    );
+  }
+  break;
 
       default:
         Navigator.pushReplacement(
